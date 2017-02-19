@@ -1,0 +1,9 @@
+{
+  "name": "argos-test-repository",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "argos-cli": "^0.3.3"
+  }
+}
