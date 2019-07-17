@@ -1,0 +1,14 @@
+{
+  "name": "test-repository",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:argos-ci/test-repository.git",
+  "author": "Greg Bergé <greg@smooth-code.com>",
+  "license": "MIT",
+  "scripts": {
+    "argos-upload": "argos upload screenshots --token $ARGOS_TOKEN"
+  },
+  "devDependencies": {
+    "argos-cli": "^0.1.1"
+  }
+}
