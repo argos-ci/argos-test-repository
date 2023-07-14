@@ -1,6 +1,6 @@
 {
   "private": true,
   "devDependencies": {
-    "@argos-ci/cli": "^0.3.2"
+    "@argos-ci/cli": "^0.4.5"
   }
 }
