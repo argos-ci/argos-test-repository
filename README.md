@@ -9,3 +9,5 @@ _Argos is a visual testing solution that fits in your workflow to avoid visual r
 # Argos test repository
 
 This repository is used for testing purpose.
+
+test
