@@ -1,3 +1,4 @@
+import { argosScreenshot } from "@argos-ci/playwright";
 import { test, expect } from "@playwright/test";
 
 test("has title", async ({ page }) => {
@@ -5,6 +6,8 @@ test("has title", async ({ page }) => {
 
   // Expect a title "to contain" a substring.
   await expect(page).toHaveTitle(/Playwright/);
+
+  await argosScreenshot(page, "sharding");
 
   if (process.env.GITHUB_RUN_ATTEMPT !== "2") {
     // Fail the test on the first attempt.
