@@ -9,7 +9,7 @@ test("has title", async ({ page }) => {
 
   await argosScreenshot(page, "sharding");
 
-  if (process.env.GITHUB_RUN_ATTEMPT !== "2") {
+  if (Number(process.env.GITHUB_RUN_ATTEMPT) === 1) {
     // Fail the test on the first attempt.
     throw new Error("Failing on purpose");
   }
