@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-node@v4
       - name: Install dependencies
         run: npm ci
-      - run: git fetch origin test-github-light --depth 50
+      - run: git fetch origin test-github-light:test-github-light --depth 50
       - run: git fetch origin main:main --depth 50
       - run: git merge-base test-github-light main
       - name: Upload screenshots
