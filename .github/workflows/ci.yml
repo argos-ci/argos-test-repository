@@ -13,8 +13,9 @@ jobs:
       - uses: actions/setup-node@v4
       - name: Install dependencies
         run: npm ci
-      - run: git fetch origin HEAD --unshallow --depth 50
-      - run: git fetch origin main:main --unshallow --depth 50
+      - run: git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+      - run: git fetch origin HEAD --depth 50
+      - run: git fetch origin main:main --depth 50
       - run: git merge-base HEAD main
       - name: Upload screenshots
         run: npm exec -- argos upload screenshots
