@@ -13,6 +13,11 @@ jobs:
       - uses: actions/setup-node@v4
       - name: Install dependencies
         run: npm ci
+      - run: |
+          git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
+          git fetch origin github-light --depth 50
+          git fetch origin main:main --depth 50
+          git merge-base github-light main
       - name: Upload screenshots
         run: npm exec -- argos upload screenshots
         env:
