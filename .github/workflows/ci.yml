@@ -17,5 +17,4 @@ jobs:
         run: npm exec -- argos upload screenshots
         env:
           DEBUG: "@argos-ci/core"
-          ARGOS_TOKEN: d808f6191835dc07380fe6e22460db7b46313b6e
-          ARGOS_API_BASE_URL: https://1e6c-93-19-70-152.ngrok-free.app/v2
+          ARGOS_TOKEN: 717548977558f124f4fccbca6c239bfe847104ab
