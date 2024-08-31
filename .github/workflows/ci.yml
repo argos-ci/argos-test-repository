@@ -9,9 +9,10 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      ARGOS_TOKEN: a1062035865420fb5a5c2a2a5baa501f94fa819f
+      ARGOS_TOKEN: 693417bc679790f870523b98ebaf777f5f0a231c
       ARGOS_PARALLEL: true
       ARGOS_PARALLEL_TOTAL: -1
+      ARGOS_API_BASE_URL: https://7b39-93-19-70-152.ngrok-free.app/v2
       DEBUG: "@argos-ci/core"
     steps:
       - uses: actions/checkout@v4
