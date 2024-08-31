@@ -4,16 +4,18 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+env:
+  ARGOS_API_BASE_URL: https://7b39-93-19-70-152.ngrok-free.app/v2
+  ARGOS_TOKEN: 693417bc679790f870523b98ebaf777f5f0a231c
+  DEBUG: "@argos-ci/core"
+
 jobs:
-  argos:
+  uploads:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      ARGOS_TOKEN: 693417bc679790f870523b98ebaf777f5f0a231c
       ARGOS_PARALLEL: true
       ARGOS_PARALLEL_TOTAL: -1
-      ARGOS_API_BASE_URL: https://7b39-93-19-70-152.ngrok-free.app/v2
-      DEBUG: "@argos-ci/core"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,9 +23,14 @@ jobs:
         run: npm ci
       - name: Upload screenshots 1/2
         run: npm exec -- argos upload screenshots/1
-      - name: Sleep
-        run: sleep 60
       - name: Upload screenshots 2/2
         run: npm exec -- argos upload screenshots/1
-      - name: Finalize
+
+  finalize:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    needs: ["uploads"]
+    steps:
+      - name: Finalize argos build
         run: npm exec -- argos finalize
