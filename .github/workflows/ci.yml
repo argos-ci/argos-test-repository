@@ -8,13 +8,19 @@ jobs:
   argos:
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    env:
+      ARGOS_TOKEN: 693417bc679790f870523b98ebaf777f5f0a231c
+      ARGOS_PARALLEL: true
+      ARGOS_PARALLEL_TOTAL: -1
+      DEBUG: "@argos-ci/core"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
       - name: Install dependencies
         run: npm ci
-      - name: Upload screenshots
-        run: npm exec -- argos upload screenshots
-        env:
-          DEBUG: "@argos-ci/core"
-          ARGOS_TOKEN: 717548977558f124f4fccbca6c239bfe847104ab
+      - name: Upload screenshots 1/2
+        run: npm exec -- argos upload screenshots/1
+      - name: Upload screenshots 2/2
+        run: npm exec -- argos upload screenshots/1
+      - name: Finalize
+        run: npm exec -- argos finalize
