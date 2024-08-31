@@ -20,6 +20,8 @@ jobs:
         run: npm ci
       - name: Upload screenshots 1/2
         run: npm exec -- argos upload screenshots/1
+      - name: Sleep
+        run: sleep 60
       - name: Upload screenshots 2/2
         run: npm exec -- argos upload screenshots/1
       - name: Finalize

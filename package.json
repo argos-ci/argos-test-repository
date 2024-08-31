@@ -1,6 +1,6 @@
 {
   "private": true,
   "devDependencies": {
-    "@argos-ci/cli": "^2.3.2"
+    "@argos-ci/cli": "canary"
   }
 }
