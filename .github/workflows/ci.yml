@@ -9,7 +9,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     env:
-      ARGOS_TOKEN: 693417bc679790f870523b98ebaf777f5f0a231c
+      ARGOS_TOKEN: a1062035865420fb5a5c2a2a5baa501f94fa819f
       ARGOS_PARALLEL: true
       ARGOS_PARALLEL_TOTAL: -1
       DEBUG: "@argos-ci/core"
