@@ -4,6 +4,8 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+env:
+  ARGOS_API_BASE_URL: https://51d4-93-19-70-152.ngrok-free.app/v2
 jobs:
   argos:
     timeout-minutes: 60
@@ -16,5 +18,8 @@ jobs:
       - name: Upload screenshots
         run: npm exec -- argos upload screenshots
         env:
-          DEBUG: "@argos-ci/core"
-          ARGOS_TOKEN: 717548977558f124f4fccbca6c239bfe847104ab
+          ARGOS_TOKEN: 7580f4f57c160e0174905d4b6545b61fc49e8ac2
+      - name: Upload screenshots
+        run: npm exec -- argos upload screenshots
+        env:
+          ARGOS_TOKEN: 693417bc679790f870523b98ebaf777f5f0a231c
