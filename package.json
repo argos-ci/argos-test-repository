@@ -1,7 +1,7 @@
 {
   "private": true,
   "devDependencies": {
-    "@argos-ci/playwright": "canary",
+    "@argos-ci/playwright": "3.5.4-alpha.0+4ed9b25",
     "@playwright/test": "^1.44.1",
     "@types/node": "^20.14.2"
   },
