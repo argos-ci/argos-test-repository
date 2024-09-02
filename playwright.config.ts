@@ -29,9 +29,6 @@ export default defineConfig({
       {
         // Upload to Argos on CI only.
         uploadToArgos: !!process.env.CI,
-
-        // Set your Argos token (required if not using GitHub Actions).
-        token: "a1062035865420fb5a5c2a2a5baa501f94fa819f",
       },
     ],
   ],
