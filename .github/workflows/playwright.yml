@@ -4,6 +4,9 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+env:
+  ARGOS_API_BASE_URL: https://b485-93-19-70-152.ngrok-free.app/v2
+  ARGOS_TOKEN: 693417bc679790f870523b98ebaf777f5f0a231c
 jobs:
   playwright-tests:
     timeout-minutes: 60
@@ -23,6 +26,3 @@ jobs:
 
       - name: Run Playwright tests
         run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
-        env:
-          ARGOS_API_BASE_URL: https://b485-93-19-70-152.ngrok-free.app/v2
-          ARGOS_TOKEN: 693417bc679790f870523b98ebaf777f5f0a231c
