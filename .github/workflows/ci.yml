@@ -1,9 +1,10 @@
 name: Argos upload
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
-    branches: [main, master]
+    branches: [main]
+  merge_group:
 jobs:
   argos:
     timeout-minutes: 60
@@ -17,4 +18,4 @@ jobs:
         run: npm exec -- argos upload screenshots
         env:
           DEBUG: "@argos-ci/core"
-          ARGOS_TOKEN: 717548977558f124f4fccbca6c239bfe847104ab
+          ARGOS_TOKEN: a1062035865420fb5a5c2a2a5baa501f94fa819f
