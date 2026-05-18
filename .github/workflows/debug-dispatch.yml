@@ -9,7 +9,7 @@ jobs:
 
     steps:
       - name: Print event type
-        run: echo "Event type: ${{ github.event.action }}"
+        run: 'echo "Event type: ${{ github.event.action }}"'
 
       - name: Print client payload
         env:
