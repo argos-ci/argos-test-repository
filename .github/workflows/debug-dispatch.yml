@@ -1,13 +1,22 @@
 name: Debug repository_dispatch
+
 on:
   repository_dispatch:
+
 jobs:
   log-event:
     runs-on: ubuntu-latest
+
     steps:
       - name: Print event type
-        run: 'echo "Event type: ${{ github.event.action }}"'
-      - name: Print full payload
-        run: echo '${{ toJSON(github.event.client_payload) }}'
+        run: echo "Event type: ${{ github.event.action }}"
+
+      - name: Print client payload
+        env:
+          CLIENT_PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: echo "$CLIENT_PAYLOAD" | jq .
+
       - name: Print full event
-        run: echo '${{ toJSON(github.event) }}'
+        env:
+          EVENT: ${{ toJSON(github.event) }}
+        run: echo "$EVENT" | jq .
