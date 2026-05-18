@@ -1,7 +1,6 @@
 name: Debug repository_dispatch
 on:
   repository_dispatch:
-    types: ["*"]
 jobs:
   log-event:
     runs-on: ubuntu-latest
