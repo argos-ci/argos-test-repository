@@ -31,15 +31,37 @@ jobs:
           # CIRCLE_NODE_INDEX is 0-based; show a friendly 1-based shard number.
           command: echo "Hello from shard $((CIRCLE_NODE_INDEX + 1))/$CIRCLE_NODE_TOTAL"
       - run:
-          name: "Simulate Playwright shard"
+          name: "Simulate Playwright shard (with auto-rerun)"
           # This mimics: npx playwright test --shard=$((CIRCLE_NODE_INDEX + 1))/$CIRCLE_NODE_TOTAL
+          # Shard 3 is made flaky on purpose: it fails the first attempt, so the
+          # auto-rerun loop below re-runs it (like rerunning failed shards in CI).
           command: |
             SHARD="$((CIRCLE_NODE_INDEX + 1))/$CIRCLE_NODE_TOTAL"
-            echo "Running tests for shard $SHARD"
-            echo "(simulation) npx playwright test --shard=$SHARD"
-            # Simulate some work so the parallel containers are visible in the UI.
-            sleep $((RANDOM % 10 + 5))
-            echo "Shard $SHARD done"
+            MAX_ATTEMPTS=3
+
+            run_tests() {
+              echo "(simulation) npx playwright test --shard=$SHARD"
+              # Simulate some work so the parallel containers are visible in the UI.
+              sleep $((RANDOM % 10 + 5))
+              # Make shard 3 (CIRCLE_NODE_INDEX == 2) fail on its first attempt only.
+              if [ "$CIRCLE_NODE_INDEX" -eq 2 ] && [ "$1" -eq 1 ]; then
+                echo "Shard $SHARD: a test failed!"
+                return 1
+              fi
+              return 0
+            }
+
+            attempt=1
+            until run_tests "$attempt"; do
+              if [ "$attempt" -ge "$MAX_ATTEMPTS" ]; then
+                echo "Shard $SHARD failed after $attempt attempts"
+                exit 1
+              fi
+              echo "Shard $SHARD failed, auto-rerunning (attempt $((attempt + 1))/$MAX_ATTEMPTS)..."
+              attempt=$((attempt + 1))
+            done
+
+            echo "Shard $SHARD passed on attempt $attempt"
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/guides/orchestrate/workflows/ & https://circleci.com/docs/reference/configuration-reference/#workflows
