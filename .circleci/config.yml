@@ -5,7 +5,7 @@ version: 2.1
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#jobs-overview & https://circleci.com/docs/reference/configuration-reference/#jobs
 jobs:
-  say-hello:
+  test-shard:
     # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/guides/execution-managed/executor-intro/ & https://circleci.com/docs/reference/configuration-reference/#executor-job
     docker:
@@ -13,22 +13,38 @@ jobs:
       # See: https://circleci.com/developer/images/image/cimg/base
       - image: cimg/base:current
 
+    # Run this job across 4 parallel containers, like Playwright shard mode.
+    # CircleCI exposes CIRCLE_NODE_TOTAL (4) and CIRCLE_NODE_INDEX (0-3) to each container.
+    # See: https://circleci.com/docs/guides/optimize/parallelism-faster-jobs/
+    parallelism: 4
+
     # Add steps to the job
     # See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#steps-overview & https://circleci.com/docs/reference/configuration-reference/#steps
     steps:
       # Checkout the code as the first step.
       - checkout
       - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
+          name: "Debug: show workflow id"
+          command: echo "CIRCLE_WORKFLOW_ID=$CIRCLE_WORKFLOW_ID"
       - run:
-          name: "Run env"
-          command: env
+          name: "Say hello from shard"
+          # CIRCLE_NODE_INDEX is 0-based; show a friendly 1-based shard number.
+          command: echo "Hello from shard $((CIRCLE_NODE_INDEX + 1))/$CIRCLE_NODE_TOTAL"
+      - run:
+          name: "Simulate Playwright shard"
+          # This mimics: npx playwright test --shard=$((CIRCLE_NODE_INDEX + 1))/$CIRCLE_NODE_TOTAL
+          command: |
+            SHARD="$((CIRCLE_NODE_INDEX + 1))/$CIRCLE_NODE_TOTAL"
+            echo "Running tests for shard $SHARD"
+            echo "(simulation) npx playwright test --shard=$SHARD"
+            # Simulate some work so the parallel containers are visible in the UI.
+            sleep $((RANDOM % 10 + 5))
+            echo "Shard $SHARD done"
 
 # Orchestrate jobs using workflows
 # See: https://circleci.com/docs/guides/orchestrate/workflows/ & https://circleci.com/docs/reference/configuration-reference/#workflows
 workflows:
-  say-hello-workflow: # This is the name of the workflow, feel free to change it to better match your workflow.
+  test-workflow: # This is the name of the workflow, feel free to change it to better match your workflow.
     # Inside the workflow, you define the jobs you want to run.
     jobs:
-      - say-hello
+      - test-shard
