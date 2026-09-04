@@ -5,6 +5,8 @@ on:
   pull_request:
     branches: [main]
 jobs:
+  # Port of the resolver from argos-ci/argos-javascript#371, instrumented to
+  # show which guard fires, across every realistic checkout configuration.
   probe:
     name: probe (${{ matrix.name }})
     runs-on: ubuntu-latest
@@ -62,3 +64,39 @@ jobs:
           node-version: 22
       - name: Run probe
         run: node scripts/merge-base-probe.mjs
+
+  # Runs the real @argos-ci/core resolver, bundled straight from the
+  # argos-javascript source, against the same git context.
+  real-source:
+    name: real source (argos-javascript@${{ matrix.ref }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [main]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6
+        with:
+          repository: argos-ci/argos-javascript
+          ref: ${{ matrix.ref }}
+          path: .argos-src
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Report the source under test
+        run: |
+          cd .argos-src
+          echo "argos-javascript @ $(git rev-parse HEAD)"
+          echo "contains getTestMergeBaseCommitSha: $(grep -c getTestMergeBaseCommitSha packages/core/src/ci-environment/services/github-actions.ts)"
+      - name: Bundle the real resolver
+        run: |
+          npm i --no-save --no-audit --no-fund esbuild p-retry debug
+          echo 'export { getMergeBaseCommitSha, listAncestorCommits } from "./.argos-src/packages/core/src/ci-environment/index";' > entry.ts
+          npx esbuild entry.ts --bundle --platform=node --format=esm --outfile=bundle.mjs --log-level=warning
+          echo "bundle: $(wc -c < bundle.mjs) bytes"
+      - name: Run the real resolver
+        env:
+          DEBUG: "@argos-ci/core"
+        run: node scripts/real-source-probe.mjs
