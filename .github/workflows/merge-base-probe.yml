@@ -93,7 +93,10 @@ jobs:
       - name: Bundle the real resolver
         run: |
           npm i --no-save --no-audit --no-fund esbuild p-retry debug
-          echo 'export { getMergeBaseCommitSha, listAncestorCommits } from "./.argos-src/packages/core/src/ci-environment/index";' > entry.ts
+          {
+            echo 'export { getMergeBaseCommitSha, listAncestorCommits } from "./.argos-src/packages/core/src/ci-environment/index";'
+            echo 'export { resolveBaseline, PARENT_COMMITS_LIMIT } from "./.argos-src/packages/core/src/find-reference-commit";'
+          } > entry.ts
           npx esbuild entry.ts --bundle --platform=node --format=esm --packages=external --outfile=bundle.mjs --log-level=warning
           echo "bundle: $(wc -c < bundle.mjs) bytes"
       - name: Read the expected base from the API
@@ -107,3 +110,10 @@ jobs:
         env:
           DEBUG: "@argos-ci/core"
         run: node scripts/real-source-probe.mjs
+      - name: Resolve the baseline the way the CLI does
+        env:
+          DEBUG: "@argos-ci/core"
+          # The commit this branch forked from, i.e. the baseline an unrebased
+          # branch used to get before the test-merge resolution landed.
+          FORK_POINT: e5ba9c1843b38f6910ed27ef8ac05f6519314ea8
+        run: node scripts/resolve-baseline-probe.mjs
