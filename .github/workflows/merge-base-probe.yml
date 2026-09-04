@@ -94,7 +94,7 @@ jobs:
         run: |
           npm i --no-save --no-audit --no-fund esbuild p-retry debug
           echo 'export { getMergeBaseCommitSha, listAncestorCommits } from "./.argos-src/packages/core/src/ci-environment/index";' > entry.ts
-          npx esbuild entry.ts --bundle --platform=node --format=esm --outfile=bundle.mjs --log-level=warning
+          npx esbuild entry.ts --bundle --platform=node --format=esm --packages=external --outfile=bundle.mjs --log-level=warning
           echo "bundle: $(wc -c < bundle.mjs) bytes"
       - name: Run the real resolver
         env:
