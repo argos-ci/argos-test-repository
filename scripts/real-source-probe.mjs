@@ -5,10 +5,15 @@
 // packages/core/src/ci-environment/index.ts, so this exercises the exact code
 // that ships in @argos-ci/core — not a re-implementation.
 import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
-const { getMergeBaseCommitSha, listAncestorCommits } = await import(
-  process.env.ARGOS_BUNDLE ?? "./bundle.mjs"
-);
+// The bundle is written next to the repository root by the workflow, so resolve
+// it from the working directory rather than from this file.
+const bundle = pathToFileURL(
+  resolve(process.cwd(), process.env.ARGOS_BUNDLE ?? "bundle.mjs"),
+).href;
+const { getMergeBaseCommitSha, listAncestorCommits } = await import(bundle);
 
 const env = process.env;
 
