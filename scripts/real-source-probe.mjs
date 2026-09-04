@@ -56,3 +56,22 @@ if (resolved) {
 
 console.log("");
 console.log(`REAL_RESOLVED=${resolved}`);
+
+// The base branch tip GitHub merged into the test-merge commit, read from the
+// API by the workflow so the assertion does not depend on the code under test.
+const expected = env.EXPECTED_BASE;
+if (!expected) {
+  console.log("EXPECTED_BASE not set, skipping the assertion");
+  process.exit(0);
+}
+
+console.log(`EXPECTED_BASE=${expected}`);
+if (resolved !== expected) {
+  console.error(
+    `\nFAIL: expected the base branch tip ${expected}, got ${resolved}.` +
+      `\nThe pull request is baselined against the fork point instead of the` +
+      ` commit GitHub merged in.`,
+  );
+  process.exit(1);
+}
+console.log("\nPASS: baselined against the commit GitHub merged in.");

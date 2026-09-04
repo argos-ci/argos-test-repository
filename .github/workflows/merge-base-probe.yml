@@ -96,6 +96,13 @@ jobs:
           echo 'export { getMergeBaseCommitSha, listAncestorCommits } from "./.argos-src/packages/core/src/ci-environment/index";' > entry.ts
           npx esbuild entry.ts --bundle --platform=node --format=esm --packages=external --outfile=bundle.mjs --log-level=warning
           echo "bundle: $(wc -c < bundle.mjs) bytes"
+      - name: Read the expected base from the API
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          EXPECTED=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}" --jq '.parents[0].sha')
+          echo "The test-merge commit's first parent is $EXPECTED"
+          echo "EXPECTED_BASE=$EXPECTED" >> "$GITHUB_ENV"
       - name: Run the real resolver
         env:
           DEBUG: "@argos-ci/core"
