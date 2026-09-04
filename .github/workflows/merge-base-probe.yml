@@ -73,7 +73,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ref: [main]
+        ref: [main, fix/test-merge-ref]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/checkout@v6
