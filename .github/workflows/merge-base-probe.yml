@@ -6,54 +6,53 @@ on:
     branches: [main]
 jobs:
   probe:
+    name: probe (${{ matrix.name }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: v6-default
-            action: actions/checkout@v6
+            v4: false
             depth: "1"
             ref: ""
             creds: "true"
           - name: v4-default
-            action: actions/checkout@v4
+            v4: true
             depth: "1"
             ref: ""
             creds: "true"
           - name: v6-depth-0
-            action: actions/checkout@v6
+            v4: false
             depth: "0"
             ref: ""
             creds: "true"
           - name: v6-depth-50
-            action: actions/checkout@v6
+            v4: false
             depth: "50"
             ref: ""
             creds: "true"
-          - name: v6-head-sha
-            action: actions/checkout@v6
+          - name: v6-head-ref
+            v4: false
             depth: "1"
             ref: "refs/pull/${{ github.event.pull_request.number }}/head"
             creds: "true"
           - name: v6-no-persist-creds
-            action: actions/checkout@v6
+            v4: false
             depth: "1"
             ref: ""
             creds: "false"
-    name: probe (${{ matrix.name }})
-    runs-on: ubuntu-latest
     steps:
-      - name: Checkout (${{ matrix.name }})
+      - name: Checkout v6
+        if: ${{ !matrix.v4 }}
         uses: actions/checkout@v6
-        if: matrix.action == 'actions/checkout@v6'
         with:
           fetch-depth: ${{ matrix.depth }}
           ref: ${{ matrix.ref }}
           persist-credentials: ${{ matrix.creds }}
-      - name: Checkout v4 (${{ matrix.name }})
+      - name: Checkout v4
+        if: ${{ matrix.v4 }}
         uses: actions/checkout@v4
-        if: matrix.action == 'actions/checkout@v4'
         with:
           fetch-depth: ${{ matrix.depth }}
           ref: ${{ matrix.ref }}
