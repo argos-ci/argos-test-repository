@@ -117,3 +117,10 @@ jobs:
           # branch used to get before the test-merge resolution landed.
           FORK_POINT: e5ba9c1843b38f6910ed27ef8ac05f6519314ea8
         run: node scripts/resolve-baseline-probe.mjs
+      - name: Reproduce the stale payload
+        env:
+          DEBUG: "@argos-ci/core"
+          FORK_POINT: e5ba9c1843b38f6910ed27ef8ac05f6519314ea8
+          # Stands in for a head.sha that lags behind the merge ref.
+          STALE_HEAD_SHA: 626626617c7f9886c8262609d07eda0fa79eabd2
+        run: node scripts/stale-payload-probe.mjs
