@@ -7,8 +7,57 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: v6-default
+            action: actions/checkout@v6
+            depth: "1"
+            ref: ""
+            creds: "true"
+          - name: v4-default
+            action: actions/checkout@v4
+            depth: "1"
+            ref: ""
+            creds: "true"
+          - name: v6-depth-0
+            action: actions/checkout@v6
+            depth: "0"
+            ref: ""
+            creds: "true"
+          - name: v6-depth-50
+            action: actions/checkout@v6
+            depth: "50"
+            ref: ""
+            creds: "true"
+          - name: v6-head-sha
+            action: actions/checkout@v6
+            depth: "1"
+            ref: "refs/pull/${{ github.event.pull_request.number }}/head"
+            creds: "true"
+          - name: v6-no-persist-creds
+            action: actions/checkout@v6
+            depth: "1"
+            ref: ""
+            creds: "false"
+    name: probe (${{ matrix.name }})
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout (${{ matrix.name }})
+        uses: actions/checkout@v6
+        if: matrix.action == 'actions/checkout@v6'
+        with:
+          fetch-depth: ${{ matrix.depth }}
+          ref: ${{ matrix.ref }}
+          persist-credentials: ${{ matrix.creds }}
+      - name: Checkout v4 (${{ matrix.name }})
+        uses: actions/checkout@v4
+        if: matrix.action == 'actions/checkout@v4'
+        with:
+          fetch-depth: ${{ matrix.depth }}
+          ref: ${{ matrix.ref }}
+          persist-credentials: ${{ matrix.creds }}
       - uses: actions/setup-node@v6
         with:
           node-version: 22
