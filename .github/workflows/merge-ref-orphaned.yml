@@ -1,0 +1,148 @@
+name: Merge ref orphaned
+permissions:
+  contents: write
+on:
+  # Answered its question (GitHub keeps serving an orphaned merge commit, so
+  # fetch-depth is not the cause). Kept for the record, run by hand only.
+  workflow_dispatch:
+jobs:
+  # Does the default "fetch-depth: 1" explain pull requests being baselined
+  # against their fork point?
+  #
+  # A push to the base branch makes GitHub recompute refs/pull/<n>/merge. The
+  # test-merge commit the run was created on (GITHUB_SHA) is then reachable from
+  # no ref, so "git fetch --depth=2 origin <sha>" is refused — and that fetch is
+  # how the resolver reads the commit's parents on a shallow clone. Without the
+  # parents it cannot recognise the test merge and falls back to the merge base,
+  # which is the fork point.
+  #
+  # Three checkouts of the same GITHUB_SHA, all taken before the base branch
+  # moves, then resolved: one before the move as a control, and two after it, at
+  # depth 1 and depth 2.
+  probe:
+    name: orphaned merge ref
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 1, path: d1-before }
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 1, path: d1-after }
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 2, path: d2-after }
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 1, path: d1-probe }
+      - uses: actions/checkout@v6
+        with:
+          repository: argos-ci/argos-javascript
+          ref: main
+          path: .argos-src
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with: { node-version: 22 }
+
+      - name: Only the first run may move the head
+        id: guard
+        run: |
+          MSG=$(git -C d1-before log -1 --format=%s)
+          echo "head commit: $MSG"
+          if echo "$MSG" | grep -q "ORPHAN-PROBE"; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "this run was created by the probe's own push; skipping"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Show what each checkout can see
+        run: |
+          for d in d1-before d1-after d2-after; do
+            echo "$d: HEAD=$(git -C $d rev-parse HEAD)"
+            echo "   parents visible: [$(git -C $d rev-list --parents -n 1 HEAD -- | cut -d' ' -f2-)]"
+          done
+          echo "GITHUB_SHA=$GITHUB_SHA"
+
+      - name: Bundle the real resolver
+        run: |
+          npm i --no-save --no-audit --no-fund esbuild p-retry debug
+          echo 'export { getMergeBaseCommitSha, listAncestorCommits } from "./.argos-src/packages/core/src/ci-environment/index";' > entry.ts
+          npx esbuild entry.ts --bundle --platform=node --format=esm --packages=external --outfile=bundle.mjs --log-level=warning
+          echo "ARGOS_BUNDLE=$GITHUB_WORKSPACE/bundle.mjs" >> "$GITHUB_ENV"
+
+      - name: Read the expected base from the API
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The first parent of the test-merge commit the screenshots came from.
+          # Read from the API so the assertion never depends on the code under
+          # test, and because the API keeps resolving the commit after it stops
+          # being reachable from a ref.
+          EXPECTED=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}" --jq '.parents[0].sha')
+          echo "EXPECTED_BASE=$EXPECTED" >> "$GITHUB_ENV"
+          echo "expected base branch tip: $EXPECTED"
+
+      - name: Control - resolve while the base branch is quiet
+        id: before
+        working-directory: d1-before
+        env:
+          DEBUG: "@argos-ci/core"
+        run: node scripts/real-source-probe.mjs
+
+      - name: Advance the pull request head, wait for the merge ref to change
+        if: ${{ steps.guard.outputs.run == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BEFORE=$(gh api "repos/${{ github.repository }}/git/ref/pull/${{ github.event.pull_request.number }}/merge" --jq '.object.sha')
+          echo "merge ref before : $BEFORE  (= GITHUB_SHA: $([ "$BEFORE" = "$GITHUB_SHA" ] && echo yes || echo no))"
+          HEAD_SHA=$(gh api "repos/${{ github.repository }}/git/ref/heads/${{ github.head_ref }}" --jq '.object.sha')
+          TREE=$(gh api "repos/${{ github.repository }}/git/commits/$HEAD_SHA" --jq '.tree.sha')
+          NEW=$(gh api -X POST "repos/${{ github.repository }}/git/commits" \
+                  -f message="test: ORPHAN-PROBE advance the head during run ${{ github.run_id }}" \
+                  -f tree="$TREE" -f parents[]="$HEAD_SHA" --jq '.sha')
+          gh api -X PATCH "repos/${{ github.repository }}/git/refs/heads/${{ github.head_ref }}" -f sha="$NEW" >/dev/null
+          echo "head advanced    : $HEAD_SHA -> $NEW"
+          for i in $(seq 1 30); do
+            NOW=$(gh api "repos/${{ github.repository }}/git/ref/pull/${{ github.event.pull_request.number }}/merge" --jq '.object.sha' 2>/dev/null || echo none)
+            if [ "$NOW" != "$BEFORE" ]; then echo "merge ref recomputed: $BEFORE -> $NOW"; exit 0; fi
+            echo "  waiting for the recompute ($i)"; sleep 10
+          done
+          echo "merge ref never changed; the reproduction cannot run" >&2
+          exit 1
+
+      - name: Can git still fetch the test-merge commit by SHA?
+        if: ${{ steps.guard.outputs.run == 'true' }}
+        working-directory: d1-probe
+        run: |
+          set +e
+          git fetch --depth=2 origin "$GITHUB_SHA" 2>&1 | sed 's/^/    /'
+          echo "    fetch exit: ${PIPESTATUS[0]}"
+
+      - name: Reproduction - resolve at depth 1 with GITHUB_SHA orphaned
+        id: after1
+        if: ${{ steps.guard.outputs.run == 'true' }}
+        continue-on-error: true
+        working-directory: d1-after
+        env:
+          DEBUG: "@argos-ci/core"
+        run: node scripts/real-source-probe.mjs
+
+      - name: Remedy - resolve at depth 2 with GITHUB_SHA orphaned
+        id: after2
+        if: ${{ steps.guard.outputs.run == 'true' }}
+        continue-on-error: true
+        working-directory: d2-after
+        env:
+          DEBUG: "@argos-ci/core"
+        run: node scripts/real-source-probe.mjs
+
+      - name: Summary
+        run: |
+          echo "control  (depth 1, base quiet)    : ${{ steps.before.outcome }}"
+          echo "repro    (depth 1, sha orphaned)  : ${{ steps.after1.outcome }}"
+          echo "remedy   (depth 2, sha orphaned)  : ${{ steps.after2.outcome }}"
+          {
+            echo "| checkout | base branch | resolver |"
+            echo "| --- | --- | --- |"
+            echo "| fetch-depth: 1 | quiet | ${{ steps.before.outcome }} |"
+            echo "| fetch-depth: 1 | moved mid-run | ${{ steps.after1.outcome }} |"
+            echo "| fetch-depth: 2 | moved mid-run | ${{ steps.after2.outcome }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
