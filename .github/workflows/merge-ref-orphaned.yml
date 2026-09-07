@@ -29,6 +29,8 @@ jobs:
       - uses: actions/checkout@v6
         with: { fetch-depth: 2, path: d2-after }
       - uses: actions/checkout@v6
+        with: { fetch-depth: 1, path: d1-probe }
+      - uses: actions/checkout@v6
         with:
           repository: argos-ci/argos-javascript
           ref: main
@@ -36,6 +38,18 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v6
         with: { node-version: 22 }
+
+      - name: Only the first run may move the head
+        id: guard
+        run: |
+          MSG=$(git -C d1-before log -1 --format=%s)
+          echo "head commit: $MSG"
+          if echo "$MSG" | grep -q "ORPHAN-PROBE"; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "this run was created by the probe's own push; skipping"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Show what each checkout can see
         run: |
@@ -71,19 +85,20 @@ jobs:
           DEBUG: "@argos-ci/core"
         run: node scripts/real-source-probe.mjs
 
-      - name: Advance the base branch, wait for the merge ref to be recomputed
+      - name: Advance the pull request head, wait for the merge ref to change
+        if: ${{ steps.guard.outputs.run == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           BEFORE=$(gh api "repos/${{ github.repository }}/git/ref/pull/${{ github.event.pull_request.number }}/merge" --jq '.object.sha')
-          echo "merge ref before : $BEFORE"
-          BASE_SHA=$(gh api "repos/${{ github.repository }}/git/ref/heads/main" --jq '.object.sha')
-          TREE=$(gh api "repos/${{ github.repository }}/git/commits/$BASE_SHA" --jq '.tree.sha')
+          echo "merge ref before : $BEFORE  (= GITHUB_SHA: $([ "$BEFORE" = "$GITHUB_SHA" ] && echo yes || echo no))"
+          HEAD_SHA=$(gh api "repos/${{ github.repository }}/git/ref/heads/${{ github.head_ref }}" --jq '.object.sha')
+          TREE=$(gh api "repos/${{ github.repository }}/git/commits/$HEAD_SHA" --jq '.tree.sha')
           NEW=$(gh api -X POST "repos/${{ github.repository }}/git/commits" \
-                  -f message="test: advance main during run ${{ github.run_id }}" \
-                  -f tree="$TREE" -f parents[]="$BASE_SHA" --jq '.sha')
-          gh api -X PATCH "repos/${{ github.repository }}/git/refs/heads/main" -f sha="$NEW" >/dev/null
-          echo "main advanced   : $BASE_SHA -> $NEW"
+                  -f message="test: ORPHAN-PROBE advance the head during run ${{ github.run_id }}" \
+                  -f tree="$TREE" -f parents[]="$HEAD_SHA" --jq '.sha')
+          gh api -X PATCH "repos/${{ github.repository }}/git/refs/heads/${{ github.head_ref }}" -f sha="$NEW" >/dev/null
+          echo "head advanced    : $HEAD_SHA -> $NEW"
           for i in $(seq 1 30); do
             NOW=$(gh api "repos/${{ github.repository }}/git/ref/pull/${{ github.event.pull_request.number }}/merge" --jq '.object.sha' 2>/dev/null || echo none)
             if [ "$NOW" != "$BEFORE" ]; then echo "merge ref recomputed: $BEFORE -> $NOW"; exit 0; fi
@@ -92,8 +107,17 @@ jobs:
           echo "merge ref never changed; the reproduction cannot run" >&2
           exit 1
 
+      - name: Can git still fetch the test-merge commit by SHA?
+        if: ${{ steps.guard.outputs.run == 'true' }}
+        working-directory: d1-probe
+        run: |
+          set +e
+          git fetch --depth=2 origin "$GITHUB_SHA" 2>&1 | sed 's/^/    /'
+          echo "    fetch exit: ${PIPESTATUS[0]}"
+
       - name: Reproduction - resolve at depth 1 with GITHUB_SHA orphaned
         id: after1
+        if: ${{ steps.guard.outputs.run == 'true' }}
         continue-on-error: true
         working-directory: d1-after
         env:
@@ -102,6 +126,7 @@ jobs:
 
       - name: Remedy - resolve at depth 2 with GITHUB_SHA orphaned
         id: after2
+        if: ${{ steps.guard.outputs.run == 'true' }}
         continue-on-error: true
         working-directory: d2-after
         env:
