@@ -2,8 +2,9 @@ name: Merge ref orphaned
 permissions:
   contents: write
 on:
-  pull_request:
-    branches: [main]
+  # Answered its question (GitHub keeps serving an orphaned merge commit, so
+  # fetch-depth is not the cause). Kept for the record, run by hand only.
+  workflow_dispatch:
 jobs:
   # Does the default "fetch-depth: 1" explain pull requests being baselined
   # against their fork point?

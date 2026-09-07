@@ -1,0 +1,62 @@
+name: Merge base from the API
+permissions:
+  contents: read
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  # Runs the real resolver from argos-ci/argos-javascript#376 on the checkout CI
+  # actually has - shallow, depth 1 - once with a token and once without, and
+  # checks both against the base branch tip read independently from the API.
+  probe:
+    name: base commit on a shallow clone
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 1, path: with-token }
+      - uses: actions/checkout@v6
+        with: { fetch-depth: 1, path: without-token }
+      - uses: actions/checkout@v6
+        with:
+          repository: argos-ci/argos-javascript
+          ref: feat/merge-base-from-github-api
+          path: .argos-src
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with: { node-version: 22 }
+
+      - name: Show what the checkout can see
+        run: |
+          echo "GITHUB_SHA : $GITHUB_SHA"
+          echo "HEAD       : $(git -C with-token rev-parse HEAD)"
+          echo "parents visible locally: [$(git -C with-token rev-list --parents -n 1 HEAD -- | cut -d' ' -f2-)]"
+
+      - name: Bundle the real resolver
+        run: |
+          npm i --no-save --no-audit --no-fund esbuild p-retry debug
+          echo 'export { getMergeBaseCommitSha, listAncestorCommits } from "./.argos-src/packages/core/src/ci-environment/index";' > entry.ts
+          npx esbuild entry.ts --bundle --platform=node --format=esm --packages=external --outfile=bundle.mjs --log-level=warning
+          echo "ARGOS_BUNDLE=$GITHUB_WORKSPACE/bundle.mjs" >> "$GITHUB_ENV"
+
+      - name: Read the expected base branch tip from the API
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The first parent of the test-merge commit the screenshots come from,
+          # read from a different endpoint than the one under test.
+          EXPECTED=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}" --jq '.parents[0].sha')
+          echo "EXPECTED_BASE=$EXPECTED" >> "$GITHUB_ENV"
+          echo "expected: $EXPECTED"
+
+      - name: With a token - resolves from the API
+        working-directory: with-token
+        env:
+          DEBUG: "@argos-ci/core"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/real-source-probe.mjs
+
+      - name: Without a token - falls back to git
+        working-directory: without-token
+        env:
+          DEBUG: "@argos-ci/core"
+        run: node scripts/real-source-probe.mjs
