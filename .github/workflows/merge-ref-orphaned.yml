@@ -69,7 +69,7 @@ jobs:
         working-directory: d1-before
         env:
           DEBUG: "@argos-ci/core"
-        run: node ../scripts/real-source-probe.mjs
+        run: node scripts/real-source-probe.mjs
 
       - name: Advance the base branch, wait for the merge ref to be recomputed
         env:
@@ -98,7 +98,7 @@ jobs:
         working-directory: d1-after
         env:
           DEBUG: "@argos-ci/core"
-        run: node ../scripts/real-source-probe.mjs
+        run: node scripts/real-source-probe.mjs
 
       - name: Remedy - resolve at depth 2 with GITHUB_SHA orphaned
         id: after2
@@ -106,7 +106,7 @@ jobs:
         working-directory: d2-after
         env:
           DEBUG: "@argos-ci/core"
-        run: node ../scripts/real-source-probe.mjs
+        run: node scripts/real-source-probe.mjs
 
       - name: Summary
         run: |
