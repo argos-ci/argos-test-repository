@@ -4,7 +4,7 @@
   </a>
 </p>
 
-_Argos is a visual testing solution that fits in your workflow to avoid visual regression. Takes screenshots on each commit and be notified if something changes._
+_The open source visual testing platform for teams and AI agents._
 
 # Argos test repository
 
